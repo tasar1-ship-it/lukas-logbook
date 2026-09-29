@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Logbook">
+<meta name="theme-color" content="#0B2545">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Logbook</title>
+<style>
+:root{
+  --navy:#0B2545; --deep:#071B34; --sea:#13315C; --line:#23466F;
+  --sail:#F4F7FA; --mist:#8DA9C4; --signal:#FFC300; --blue:#1D5FBF; --flag:#D62828;
+  --cond:"Avenir Next Condensed","AvenirNextCondensed-Bold","Arial Narrow",sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--navy);color:var(--sail);height:100%}
+body{font-family:-apple-system,"SF Pro Text","Helvetica Neue",Helvetica,sans-serif;font-size:17px;line-height:1.35;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.hidden{display:none!important}
+
+/* header */
+header{padding:calc(env(safe-area-inset-top) + 14px) 20px 10px;position:relative;overflow:hidden}
+.toprow{display:flex;align-items:center;justify-content:space-between;color:var(--mist);font-size:15px}
+.toprow .who{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mist)}
+.dot.on{background:#3DDC84}
+.gear{width:40px;height:40px;display:flex;align-items:center;justify-content:center;margin-right:-8px}
+.score{display:flex;align-items:flex-end;gap:14px;margin-top:6px}
+.big{font-family:var(--cond);font-weight:800;font-size:84px;line-height:.82;letter-spacing:-1px;color:var(--sail)}
+.biglabel{font-family:var(--cond);font-weight:700;font-size:22px;line-height:1.05;padding-bottom:4px}
+.biglabel small{display:block;font-family:-apple-system,sans-serif;font-weight:400;font-size:15px;color:var(--mist)}
+.stats{display:flex;gap:18px;margin-top:12px;font-size:15px;color:var(--mist)}
+.stats b{color:var(--signal);font-weight:700}
+.bunting{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 2px);height:26px;display:flex;gap:6px;transform:translateX(-110%);pointer-events:none}
+header.clear .bunting{animation:dress 2.4s ease-out 1 forwards}
+@keyframes dress{0%{transform:translateX(-110%)}70%{transform:translateX(4%)}100%{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){header.clear .bunting{animation:none;transform:none}}
+
+/* filter */
+.filters{display:flex;gap:8px;padding:6px 20px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto;padding:7px 14px;border-radius:18px;border:1px solid var(--line);color:var(--mist);font-size:15px;display:flex;align-items:center;gap:7px}
+.chip.on{background:var(--sail);color:var(--navy);border-color:var(--sail);font-weight:600}
+
+/* list */
+main{padding:0 0 calc(env(safe-area-inset-bottom) + 170px)}
+.sec{margin:6px 0 18px}
+.sechead{display:flex;align-items:center;gap:10px;padding:10px 20px 6px;position:sticky;top:0;background:var(--navy);z-index:2}
+.sechead h2{margin:0;font-family:var(--cond);font-weight:800;font-size:26px;letter-spacing:.2px}
+.sechead .cnt{margin-left:auto;color:var(--mist);font-size:15px}
+.flag{display:block;flex:0 0 auto}
+.rows{background:var(--sea);margin:0 12px;border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;min-height:54px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.chk{flex:0 0 auto;width:54px;height:54px;display:flex;align-items:center;justify-content:center}
+.box{width:26px;height:26px;border-radius:50%;border:2px solid var(--mist);display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+.row.done .box{background:var(--signal);border-color:var(--signal)}
+.box svg{opacity:0}
+.row.done .box svg{opacity:1}
+.row.pop .box{animation:pop .28s ease-out}
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+.txt{flex:1;text-align:left;padding:12px 14px 12px 0;min-width:0;overflow-wrap:anywhere}
+.row.done .txt{color:var(--mist);text-decoration:line-through;text-decoration-color:rgba(141,169,196,.6)}
+.tag{display:inline-block;margin-left:6px;font-size:12px;color:var(--mist);border:1px solid var(--line);border-radius:6px;padding:0 5px;vertical-align:2px}
+.new{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--signal);margin-right:7px;vertical-align:1px}
+.empty{padding:16px 18px;color:var(--mist);font-size:15px}
+.donehdr{display:block;width:calc(100% - 24px);margin:8px 12px 0;text-align:left;padding:8px 8px;color:var(--mist);font-size:15px}
+
+/* add bar */
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--deep);border-top:1px solid var(--line);padding:10px 12px calc(env(safe-area-inset-bottom) + 10px);z-index:5}
+.nudge{display:flex;align-items:center;gap:10px;background:var(--signal);color:var(--navy);border-radius:12px;padding:8px 8px 8px 14px;margin-bottom:10px;font-weight:600;font-size:15px}
+.nudge button{margin-left:auto;background:var(--navy);color:var(--sail);border-radius:9px;padding:8px 12px;font-size:15px;font-weight:600;white-space:nowrap}
+.pick{display:flex;gap:8px;margin-bottom:8px}
+.pick button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:7px 4px;border-radius:10px;border:1px solid var(--line);color:var(--mist);font-size:14px}
+.pick button.on{border-color:var(--signal);color:var(--sail);background:rgba(255,195,0,.08)}
+.addrow{display:flex;gap:8px;align-items:center}
+.mic{flex:0 0 auto;width:46px;height:46px;border-radius:12px;background:var(--sea);display:flex;align-items:center;justify-content:center}
+#addInput{flex:1;min-width:0;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--navy);color:var(--sail);font-size:17px;padding:0 12px;-webkit-appearance:none}
+#addInput::placeholder{color:var(--mist)}
+.addbtn{flex:0 0 auto;height:46px;padding:0 16px;border-radius:12px;background:var(--signal);color:var(--navy);font-weight:700}
+
+/* sheets */
+.veil{position:fixed;inset:0;background:rgba(4,14,28,.6);z-index:10;display:flex;align-items:flex-end}
+.sheet{width:100%;max-height:90%;overflow-y:auto;background:var(--sea);border-radius:18px 18px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px)}
+.sheet h3{margin:0 0 12px;font-family:var(--cond);font-weight:800;font-size:26px}
+.sheet label{display:block;font-size:14px;color:var(--mist);margin:14px 0 6px}
+.sheet input,.sheet textarea{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--navy);color:var(--sail);font-size:17px;padding:10px 12px;font-family:inherit;-webkit-appearance:none}
+.sheet textarea{min-height:84px;resize:vertical}
+.btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.btn{flex:1;min-width:120px;padding:12px;border-radius:12px;background:var(--navy);border:1px solid var(--line);font-weight:600;text-align:center}
+.btn.primary{background:var(--signal);color:var(--navy);border-color:var(--signal)}
+.btn.danger{color:#FF8A8A;border-color:#6B2C3A}
+.note{font-size:14px;color:var(--mist);margin:8px 0 0}
+.info{font-size:14px;color:var(--mist);margin-top:18px;line-height:1.5}
+
+/* setup and messages */
+.setup{padding:calc(env(safe-area-inset-top) + 28px) 22px 40px;max-width:560px;margin:0 auto}
+.setup h1{font-family:var(--cond);font-weight:800;font-size:44px;line-height:1;margin:14px 0 8px}
+.setup p{color:var(--mist);margin:6px 0 16px}
+.setup textarea,.setup input{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--sea);color:var(--sail);font-size:16px;padding:10px 12px;font-family:inherit;-webkit-appearance:none}
+.setup textarea{min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.setup h2{font-size:18px;margin:30px 0 4px}
+.err{color:#FF8A8A;font-size:15px;margin-top:10px}
+.homehint{margin:0 12px 14px;padding:12px 14px;border-radius:12px;border:1px dashed var(--mist);color:var(--sail);font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.homehint button{margin-left:auto;color:var(--mist);font-size:22px;line-height:1;padding:0 4px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 190px);transform:translateX(-50%);background:var(--sail);color:var(--navy);padding:10px 16px;border-radius:12px;font-size:15px;font-weight:600;z-index:20;max-width:88%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.fatal{margin:40px 22px;padding:16px;border-radius:12px;background:#3A1822;color:#FFD6D6}
+</style>
+</head>
+<body>
+
+<div id="setup" class="setup hidden">
+  <div id="setupFlag"></div>
+  <h1>Set up the logbook</h1>
+  <p>Lukas: open the link Dad sent you on WhatsApp instead of using this page.</p>
+
+  <h2>Got a code?</h2>
+  <p>Paste the code from the WhatsApp message.</p>
+  <input id="joinCode" placeholder="Paste code" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="btns"><button class="btn primary" id="joinBtn">Join the logbook</button></div>
+  <div class="err hidden" id="joinErr"></div>
+
+  <h2>First time on Dad's phone</h2>
+  <p>Paste the Firebase web config for this app (the block that starts with <b>const firebaseConfig</b>).</p>
+  <textarea id="cfgText" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="const firebaseConfig = { ... };"></textarea>
+  <div class="btns"><button class="btn primary" id="cfgBtn">Connect as Dad</button></div>
+  <div class="err hidden" id="cfgErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <header id="hdr">
+    <div class="bunting" id="bunting"></div>
+    <div class="toprow">
+      <div class="who"><span class="dot" id="dot"></span><span id="whoLine">Logbook</span></div>
+      <button class="gear" id="gearBtn" aria-label="Settings">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8DA9C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+    <div class="score">
+      <div class="big" id="bigNum">0</div>
+      <div class="biglabel" id="bigLabel">to do<small>Connecting...</small></div>
+    </div>
+    <div class="stats">
+      <span>Done today <b id="todayNum">0</b></span>
+      <span>Streak <b id="streakNum">0</b> <span id="streakWord">days</span></span>
+    </div>
+  </header>
+
+  <div class="homehint hidden" id="homeHint">
+    <span>Put it on the Home Screen: tap <b>Share</b>, then <b>Add to Home Screen</b>. Always open it from there.</span>
+    <button id="homeHintX" aria-label="Hide">&times;</button>
+  </div>
+
+  <nav class="filters" id="filters"></nav>
+  <main id="list"></main>
+
+  <div class="bar">
+    <div class="nudge hidden" id="nudge"><span id="nudgeText"></span><button id="waBtn">Send on WhatsApp</button></div>
+    <div class="pick" id="pick"></div>
+    <div class="addrow">
+      <button class="mic" id="micBtn" aria-label="Speak an entry">
+        <svg width="20" height="22" viewBox="0 0 20 24" fill="none" stroke="#F4F7FA" stroke-width="2" stroke-linecap="round"><rect x="6" y="2" width="8" height="13" rx="4"/><path d="M2 11a8 8 0 0 0 16 0M10 19v3"/></svg>
+      </button>
+      <input id="addInput" type="text" enterkeyhint="done" autocomplete="off" placeholder="Add to Sailing">
+      <button class="addbtn" id="addBtn">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="fatal" class="fatal hidden"></div>
+<div id="sheetHost"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-auth-compat.js"></script>
+<script src="firebase-database-compat.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var APP_VERSION = '1.0.0';
+  var P = 'lb1_';
+  var SECTIONS = [
+    { id: 'sail', name: 'Sailing', short: 'Sailing', flag: 'p' },
+    { id: 'school', name: 'School', short: 'School', flag: 's' },
+    { id: 'life', name: 'Daily life', short: 'Life', flag: 'l' }
+  ];
+
+  var cfg = null, famKey = null, role = null, famRef = null;
+  var items = {}, days = {}, meta = { kid: 'Lukas', parent: 'Dad' };
+  var filter = 'all', sec = 'sail', pending = [], openDone = {};
+  var seenAtOpen = 0, connected = false, loaded = false, lastOpenCount = -1;
+  var toastTimer = null;
+
+  /* ---------- helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function lsGet(k) { try { var v = localStorage.getItem(P + k); return v === null ? null : JSON.parse(v); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(P + k, JSON.stringify(v)); } catch (e) {} }
+  function lsDel(k) { try { localStorage.removeItem(P + k); } catch (e) {} }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function dayKey(d) { d = d || new Date(); return '' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); }
+  function secById(id) { for (var i = 0; i < SECTIONS.length; i++) { if (SECTIONS[i].id === id) { return SECTIONS[i]; } } return SECTIONS[2]; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } if (text !== undefined && text !== null) { e.textContent = text; } return e; }
+  function show(id, on) { var e = $(id); if (on) { e.classList.remove('hidden'); } else { e.classList.add('hidden'); } }
+  function otherName() { return role === 'dad' ? meta.kid : meta.parent; }
+  function myName() { return role === 'dad' ? meta.parent : meta.kid; }
+  function baseUrl() { return location.origin + location.pathname; }
+
+  function flagSvg(f, w) {
+    w = w || 30; var h = Math.round(w * 2 / 3);
+    var s = '<svg class="flag" width="' + w + '" height="' + h + '" viewBox="0 0 30 20" aria-hidden="true">';
+    if (f === 'p') { s += '<rect width="30" height="20" fill="#1D5FBF"/><rect x="10" y="6.5" width="10" height="7" fill="#F4F7FA"/>'; }
+    else if (f === 's') { s += '<rect width="30" height="20" fill="#F4F7FA"/><rect x="10" y="6.5" width="10" height="7" fill="#1D5FBF"/>'; }
+    else if (f === 'l') { s += '<rect width="30" height="20" fill="#16181D"/><rect width="15" height="10" fill="#FFC300"/><rect x="15" y="10" width="15" height="10" fill="#FFC300"/>'; }
+    else if (f === 'b') { s += '<rect width="30" height="20" fill="#D62828"/>'; }
+    else if (f === 'k') { s += '<rect width="30" height="20" fill="#1D5FBF"/><rect width="15" height="20" fill="#FFC300"/>'; }
+    else if (f === 'u') { s += '<rect width="30" height="20" fill="#F4F7FA"/><rect width="15" height="10" fill="#D62828"/><rect x="15" y="10" width="15" height="10" fill="#D62828"/>'; }
+    s += '<rect width="30" height="20" fill="none" stroke="rgba(0,0,0,.25)"/></svg>';
+    return s;
+  }
+
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; show('toast', true);
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () { show('toast', false); }, 3200);
+  }
+
+  function fatal(msg) {
+    var f = $('fatal'); f.textContent = msg; show('fatal', true);
+  }
+
+  function randomKey() {
+    var chars = 'abcdefghijkmnpqrstuvwxyz23456789', out = '', arr, i;
+    if (window.crypto && window.crypto.getRandomValues) {
+      arr = new Uint8Array(24); window.crypto.getRandomValues(arr);
+      for (i = 0; i < 24; i++) { out += chars.charAt(arr[i] % chars.length); }
+    } else {
+      for (i = 0; i < 24; i++) { out += chars.charAt(Math.floor(Math.random() * chars.length)); }
+    }
+    return out;
+  }
+
+  /* ---------- join codes ---------- */
+  function encodeJoin(r) {
+    var json = JSON.stringify({ v: 1, k: famKey, r: r, c: cfg });
+    var b = btoa(unescape(encodeURIComponent(json)));
+    return b.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodeJoin(code) {
+    try {
+      code = String(code).replace(/\s+/g, '');
+      var m = code.match(/[?&]j=([A-Za-z0-9_\-]+)/); if (m) { code = m[1]; }
+      var b = code.replace(/-/g, '+').replace(/_/g, '/');
+      while (b.length % 4) { b += '='; }
+      var d = JSON.parse(decodeURIComponent(escape(atob(b))));
+      if (!d || !d.k || !d.c || !d.c.apiKey || !d.c.databaseURL) { return null; }
+      return d;
+    } catch (e) { return null; }
+  }
+  function applyJoin(d) {
+    cfg = d.c; famKey = d.k; role = d.r === 'd' ? 'dad' : 'kid';
+    lsSet('cfg', cfg); lsSet('key', famKey); lsSet('role', role);
+  }
+  function queryParam(name) {
+    var m = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  function parseConfig(text) {
+    var keys = ['apiKey', 'authDomain', 'databaseURL', 'projectId', 'appId'], out = {}, i, m;
+    for (i = 0; i < keys.length; i++) {
+      m = text.match(new RegExp('["\']?' + keys[i] + '["\']?\\s*:\\s*["\']([^"\']+)["\']'));
+      if (m) { out[keys[i]] = m[1]; }
+    }
+    return out;
+  }
+
+  /* ---------- setup screen ---------- */
+  function showSetup() {
+    $('setupFlag').innerHTML = flagSvg('p', 48) ;
+    show('setup', true); show('app', false);
+    $('joinBtn').onclick = function () {
+      var d = decodeJoin($('joinCode').value);
+      if (!d) { $('joinErr').textContent = 'That code is not complete. Copy the whole code from the WhatsApp message and paste it again.'; show('joinErr', true); return; }
+      applyJoin(d); keepJoinInUrl(); start();
+    };
+    $('cfgBtn').onclick = function () {
+      var c = parseConfig($('cfgText').value);
+      if (!c.apiKey || !c.projectId) { $('cfgErr').textContent = 'No apiKey or projectId found. Copy the whole firebaseConfig block from the Firebase console and paste it again.'; show('cfgErr', true); return; }
+      if (!c.databaseURL) { $('cfgErr').textContent = 'The config has no databaseURL. Create the Realtime Database first, then copy the config again from Project settings.'; show('cfgErr', true); return; }
+      cfg = c; famKey = randomKey(); role = 'dad';
+      lsSet('cfg', cfg); lsSet('key', famKey); lsSet('role', role);
+      keepJoinInUrl(); start();
+    };
+  }
+
+  // Keeps the join code in the address bar, so "Add to Home Screen" saves a
+  // link that can rebuild this phone's setup if iOS clears the app's storage.
+  function keepJoinInUrl() {
+    try { history.replaceState(null, '', baseUrl() + '?j=' + encodeJoin(role === 'dad' ? 'd' : 'l')); } catch (e) {}
+  }
+
+  /* ---------- start ---------- */
+  function boot() {
+    var j = queryParam('j');
+    if (j && !lsGet('key')) { var d = decodeJoin(j); if (d) { applyJoin(d); } }
+    cfg = lsGet('cfg'); famKey = lsGet('key'); role = lsGet('role');
+    if (!cfg || !famKey || !role) { showSetup(); return; }
+    start();
+  }
+
+  function start() {
+    show('setup', false); show('app', true);
+    pending = lsGet('pending') || [];
+    filter = lsGet('filter') || 'all';
+    sec = lsGet('sec') || 'sail';
+    seenAtOpen = lsGet('seen') || 0;
+    if (!window.navigator.standalone && !lsGet('hintHidden')) { show('homeHint', true); }
+    bindUi();
+    render();
+
+    if (typeof firebase === 'undefined') {
+      fatal('The sync code did not load. Check the internet connection, then close and reopen the app.');
+      return;
+    }
+    try { firebase.initializeApp(cfg); } catch (e) { fatal('Could not start sync: ' + e.message); return; }
+    firebase.auth().signInAnonymously().then(attach).catch(function (e) {
+      fatal('Sign-in failed (' + e.code + '). In Firebase, check that Anonymous sign-in is switched on.');
+    });
+  }
+
+  function onDbError(e) { fatal('The database refused access (' + (e && e.code ? e.code : 'error') + '). Check the database rules in Firebase.'); }
+
+  function attach() {
+    var db = firebase.database();
+    famRef = db.ref('logbook/' + famKey);
+    db.ref('.info/connected').on('value', function (s) { connected = !!s.val(); render(); });
+    famRef.child('meta').on('value', function (s) {
+      var m = s.val();
+      if (!m && role === 'dad') { famRef.child('meta').set({ kid: 'Lukas', parent: 'Dad' }); return; }
+      if (m) { meta.kid = m.kid || 'Lukas'; meta.parent = m.parent || 'Dad'; }
+      render();
+    }, onDbError);
+    famRef.child('days').on('value', function (s) { days = s.val() || {}; render(); }, onDbError);
+    famRef.child('items').on('value', function (s) {
+      items = s.val() || {}; loaded = true; render();
+      lsSet('seen', Date.now());
+    }, onDbError);
+  }
+
+  /* ---------- counts ---------- */
+  function openCount(sid) {
+    var n = 0, id;
+    for (id in items) { if (items.hasOwnProperty(id) && !items[id].d && (!sid || items[id].s === sid)) { n++; } }
+    return n;
+  }
+  function streak() {
+    var d = new Date(), n = 0;
+    if (!(days[dayKey(d)] > 0)) { d.setDate(d.getDate() - 1); }
+    while (days[dayKey(d)] > 0) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    var open = openCount();
+    $('dot').className = 'dot' + (connected ? ' on' : '');
+    $('whoLine').textContent = role === 'dad' ? meta.kid + "'s logbook" : 'Hi ' + meta.kid;
+    $('bigNum').textContent = open === 0 && loaded ? '0' : String(open);
+    var sub = !loaded ? 'Connecting...' : (open === 0 ? 'All clear. Nice.' : (connected ? 'Synced' : 'Offline, will sync'));
+    $('bigLabel').innerHTML = '';
+    $('bigLabel').appendChild(document.createTextNode(open === 1 ? 'thing to do' : 'things to do'));
+    $('bigLabel').appendChild(el('small', '', sub));
+    $('todayNum').textContent = String(days[dayKey()] || 0);
+    var st = streak();
+    $('streakNum').textContent = String(st);
+    $('streakWord').textContent = st === 1 ? 'day' : 'days';
+
+    renderFilters(); renderList(); renderPick(); renderNudge();
+    lastOpenCount = open;
+  }
+
+  function renderFilters() {
+    var f = $('filters'); f.innerHTML = '';
+    var all = el('button', 'chip' + (filter === 'all' ? ' on' : ''), 'All');
+    all.setAttribute('data-f', 'all'); f.appendChild(all);
+    for (var i = 0; i < SECTIONS.length; i++) {
+      var s = SECTIONS[i], b = el('button', 'chip' + (filter === s.id ? ' on' : ''));
+      b.setAttribute('data-f', s.id);
+      b.innerHTML = flagSvg(s.flag, 18);
+      b.appendChild(document.createTextNode(s.short + ' ' + openCount(s.id)));
+      f.appendChild(b);
+    }
+  }
+
+  function sortedIds(sid, done) {
+    var ids = [], id;
+    for (id in items) { if (items.hasOwnProperty(id) && items[id].s === sid && !!items[id].d === done) { ids.push(id); } }
+    ids.sort(function (a, b) {
+      if (done) { return (items[b].dt || 0) - (items[a].dt || 0); }
+      return (items[a].c || 0) - (items[b].c || 0);
+    });
+    return ids;
+  }
+
+  function renderRow(id, popId) {
+    var it = items[id];
+    var row = el('div', 'row' + (it.d ? ' done' : '') + (id === popId ? ' pop' : ''));
+    var chk = el('button', 'chk'); chk.setAttribute('data-t', id);
+    chk.setAttribute('aria-label', (it.d ? 'Untick ' : 'Tick ') + it.t);
+    chk.innerHTML = '<span class="box"><svg width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="#0B2545" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.5l3.5 3.5 7.5-8.5"/></svg></span>';
+    var txt = el('button', 'txt'); txt.setAttribute('data-e', id);
+    if (!it.d && it.by && it.by !== role && (it.c || 0) > seenAtOpen) { txt.appendChild(el('span', 'new')); }
+    txt.appendChild(document.createTextNode(it.t));
+    if (it.by && it.by !== role) { txt.appendChild(el('span', 'tag', it.by === 'dad' ? meta.parent : meta.kid)); }
+    row.appendChild(chk); row.appendChild(txt);
+    return row;
+  }
+
+  var popId = null;
+  function renderList() {
+    var list = $('list'); list.innerHTML = '';
+    for (var i = 0; i < SECTIONS.length; i++) {
+      var s = SECTIONS[i];
+      if (filter !== 'all' && filter !== s.id) { continue; }
+      var wrap = el('section', 'sec');
+      var head = el('div', 'sechead');
+      head.innerHTML = flagSvg(s.flag, 30);
+      head.appendChild(el('h2', '', s.name));
+      var oc = openCount(s.id);
+      head.appendChild(el('span', 'cnt', oc === 0 ? 'clear' : oc + ' open'));
+      wrap.appendChild(head);
+
+      var openIds = sortedIds(s.id, false), doneIds = sortedIds(s.id, true), j;
+      var rows = el('div', 'rows');
+      if (openIds.length === 0) {
+        rows.appendChild(el('div', 'empty', loaded ? 'Nothing open here. Add something below.' : 'Loading...'));
+      }
+      for (j = 0; j < openIds.length; j++) { rows.appendChild(renderRow(openIds[j], popId)); }
+      wrap.appendChild(rows);
+
+      if (doneIds.length) {
+        var dh = el('button', 'donehdr', (openDone[s.id] ? 'Hide done ' : 'Show done ') + '(' + doneIds.length + ')');
+        dh.setAttribute('data-d', s.id); wrap.appendChild(dh);
+        if (openDone[s.id]) {
+          var drows = el('div', 'rows');
+          for (j = 0; j < doneIds.length; j++) { drows.appendChild(renderRow(doneIds[j], popId)); }
+          wrap.appendChild(drows);
+        }
+      }
+      list.appendChild(wrap);
+    }
+    popId = null;
+  }
+
+  function renderPick() {
+    var p = $('pick'); p.innerHTML = '';
+    for (var i = 0; i < SECTIONS.length; i++) {
+      var s = SECTIONS[i], b = el('button', sec === s.id ? 'on' : '');
+      b.setAttribute('data-s', s.id); b.innerHTML = flagSvg(s.flag, 18);
+      b.appendChild(document.createTextNode(s.short));
+      p.appendChild(b);
+    }
+    $('addInput').placeholder = 'Add to ' + secById(sec).name;
+  }
+
+  function renderNudge() {
+    var on = role === 'dad' && pending.length > 0;
+    show('nudge', on);
+    if (on) { $('nudgeText').textContent = pending.length + (pending.length === 1 ? ' change' : ' changes') + ' for ' + meta.kid; }
+  }
+
+  /* ---------- actions ---------- */
+  function note(change) {
+    if (role !== 'dad') { return; }
+    pending.push(change); lsSet('pending', pending);
+  }
+
+  function addItem() {
+    var inp = $('addInput'), t = inp.value.replace(/\s+/g, ' ').replace(/^\s|\s$/g, '');
+    if (!t) { inp.focus(); return; }
+    if (!famRef) { toast('Still connecting. Try again in a moment.'); return; }
+    famRef.child('items').push({ t: t, s: sec, d: false, by: role, c: firebase.database.ServerValue.TIMESTAMP });
+    note({ a: 'add', s: sec, t: t });
+    inp.value = '';
+    render();
+  }
+
+  function bumpDay(k, delta) {
+    famRef.child('days/' + k).transaction(function (v) {
+      var n = (v || 0) + delta; return n > 0 ? n : null;
+    });
+  }
+
+  function toggle(id) {
+    var it = items[id]; if (!it || !famRef) { return; }
+    if (!it.d) {
+      var k = dayKey(), wasLast = openCount() === 1;
+      popId = id;
+      famRef.child('items/' + id).update({ d: true, dt: Date.now(), dk: k });
+      bumpDay(k, 1);
+      if (wasLast) { celebrate(); }
+    } else {
+      famRef.child('items/' + id).update({ d: false, dt: null, dk: null });
+      if (it.dk) { bumpDay(it.dk, -1); }
+    }
+  }
+
+  function celebrate() {
+    var h = $('hdr'), b = $('bunting'), f = ['b', 'p', 'l', 'k', 'u', 's', 'b', 'p', 'l', 'k', 'u', 's', 'b', 'p'], s = '';
+    for (var i = 0; i < f.length; i++) { s += flagSvg(f[i], 30); }
+    b.innerHTML = s;
+    h.classList.remove('clear'); void h.offsetWidth; h.classList.add('clear');
+    toast('All clear. ' + (role === 'kid' ? 'Well sailed, ' + meta.kid + '.' : 'Everything is done.'));
+    setTimeout(function () { h.classList.remove('clear'); }, 6000);
+  }
+
+  function sendWhatsApp() {
+    var lines = [], i, c, max = 15;
+    lines.push('\u26F5 Logbook update from ' + meta.parent);
+    for (i = 0; i < pending.length && i < max; i++) {
+      c = pending[i];
+      if (c.a === 'add') { lines.push('New in ' + secById(c.s).name + ': ' + c.t); }
+      else if (c.a === 'edit') { lines.push('Changed in ' + secById(c.s).name + ': ' + c.t); }
+      else if (c.a === 'del') { lines.push('Removed: ' + c.t); }
+      else if (c.a === 'clear') { lines.push('Cleared ' + c.n + ' done items'); }
+    }
+    if (pending.length > max) { lines.push('...and ' + (pending.length - max) + ' more'); }
+    lines.push('Open the Logbook to see it.');
+    openWhatsApp(lines.join('\n'));
+    pending = []; lsSet('pending', pending); render();
+  }
+
+  function openWhatsApp(text) {
+    var phone = (lsGet('phone') || '').replace(/[^0-9]/g, '');
+    var url = 'whatsapp://send?' + (phone ? 'phone=' + phone + '&' : '') + 'text=' + encodeURIComponent(text);
+    location.href = url;
+  }
+
+  /* ---------- sheets ---------- */
+  function closeSheet() { $('sheetHost').innerHTML = ''; }
+  function openSheet(build) {
+    var host = $('sheetHost'); host.innerHTML = '';
+    var veil = el('div', 'veil'), sheet = el('div', 'sheet');
+    veil.onclick = function (e) { if (e.target === veil) { closeSheet(); } };
+    build(sheet); veil.appendChild(sheet); host.appendChild(veil);
+  }
+  function btn(label, cls, fn) { var b = el('button', 'btn' + (cls ? ' ' + cls : ''), label); b.onclick = fn; return b; }
+  function twoTap(label, confirmLabel, cls, fn) {
+    var armed = false, b = btn(label, cls, function () {
+      if (!armed) { armed = true; b.textContent = confirmLabel; setTimeout(function () { armed = false; b.textContent = label; }, 3000); return; }
+      fn();
+    });
+    return b;
+  }
+
+  function openEdit(id) {
+    var it = items[id]; if (!it) { return; }
+    var chosen = it.s;
+    openSheet(function (sh) {
+      sh.appendChild(el('h3', '', 'Edit entry'));
+      var ta = el('textarea'); ta.value = it.t; sh.appendChild(ta);
+      sh.appendChild(el('label', '', 'Section'));
+      var pick = el('div', 'pick');
+      function paint() {
+        pick.innerHTML = '';
+        for (var i = 0; i < SECTIONS.length; i++) {
+          (function (s) {
+            var b = el('button', chosen === s.id ? 'on' : ''); b.innerHTML = flagSvg(s.flag, 18);
+            b.appendChild(document.createTextNode(s.short));
+            b.onclick = function () { chosen = s.id; paint(); };
+            pick.appendChild(b);
+          })(SECTIONS[i]);
+        }
+      }
+      paint(); sh.appendChild(pick);
+      var row = el('div', 'btns');
+      row.appendChild(btn('Save', 'primary', function () {
+        var t = ta.value.replace(/\s+/g, ' ').replace(/^\s|\s$/g, '');
+        if (!t) { ta.focus(); return; }
+        if (t !== it.t || chosen !== it.s) {
+          famRef.child('items/' + id).update({ t: t, s: chosen });
+          note({ a: 'edit', s: chosen, t: t });
+        }
+        closeSheet(); render();
+      }));
+      row.appendChild(btn('Cancel', '', closeSheet));
+      sh.appendChild(row);
+      var row2 = el('div', 'btns');
+      row2.appendChild(twoTap('Delete entry', 'Tap again to delete', 'danger', function () {
+        famRef.child('items/' + id).remove();
+        note({ a: 'del', t: it.t });
+        closeSheet(); render();
+      }));
+      sh.appendChild(row2);
+    });
+  }
+
+  function doneIdsAll() {
+    var out = [], id;
+    for (id in items) { if (items.hasOwnProperty(id) && items[id].d) { out.push(id); } }
+    return out;
+  }
+
+  function openSettings() {
+    openSheet(function (sh) {
+      sh.appendChild(el('h3', '', 'Settings'));
+      var kidIn, parIn, phoneIn;
+      if (role === 'dad') {
+        sh.appendChild(el('label', '', "Your son's name"));
+        kidIn = el('input'); kidIn.value = meta.kid; sh.appendChild(kidIn);
+        sh.appendChild(el('label', '', 'What he calls you'));
+        parIn = el('input'); parIn.value = meta.parent; sh.appendChild(parIn);
+        sh.appendChild(el('label', '', meta.kid + "'s WhatsApp number, with country code"));
+        phoneIn = el('input'); phoneIn.type = 'tel'; phoneIn.placeholder = '+34 600 000 000';
+        phoneIn.value = lsGet('phone') || ''; sh.appendChild(phoneIn);
+        sh.appendChild(el('p', 'note', 'Leave it empty to pick the chat in WhatsApp each time. The number stays on this phone only.'));
+        var r1 = el('div', 'btns');
+        r1.appendChild(btn('Save', 'primary', function () {
+          var k = kidIn.value.replace(/^\s+|\s+$/g, '') || 'Lukas', p = parIn.value.replace(/^\s+|\s+$/g, '') || 'Dad';
+          if (famRef) { famRef.child('meta').set({ kid: k, parent: p }); }
+          lsSet('phone', phoneIn.value.replace(/^\s+|\s+$/g, ''));
+          closeSheet(); toast('Saved');
+        }));
+        sh.appendChild(r1);
+        var r2 = el('div', 'btns');
+        r2.appendChild(btn('Send ' + meta.kid + ' his copy', '', function () {
+          lsSet('phone', phoneIn.value.replace(/^\s+|\s+$/g, ''));
+          var code = encodeJoin('l');
+          openWhatsApp('Hi ' + meta.kid + ', here is your Logbook \u26F5\n\n' +
+            '1. Open this link in Safari:\n' + baseUrl() + '?j=' + code + '\n\n' +
+            '2. Tap Share, then Add to Home Screen. Open it from there from now on.\n\n' +
+            'If it asks for a code, paste this:\n' + code);
+        }));
+        sh.appendChild(r2);
+      }
+      var n = doneIdsAll().length;
+      if (n > 0) {
+        var r3 = el('div', 'btns');
+        r3.appendChild(twoTap('Clear ' + n + ' done ' + (n === 1 ? 'item' : 'items'), 'Tap again to clear', '', function () {
+          var ids = doneIdsAll(), upd = {};
+          for (var i = 0; i < ids.length; i++) { upd[ids[i]] = null; }
+          famRef.child('items').update(upd);
+          note({ a: 'clear', n: ids.length });
+          closeSheet(); render();
+        }));
+        sh.appendChild(r3);
+      }
+      var info = el('div', 'info');
+      info.appendChild(document.createTextNode('This phone: ' + myName() + '. Sync: ' + (connected ? 'connected' : 'offline') + '. Version ' + APP_VERSION + '.'));
+      sh.appendChild(info);
+      var r4 = el('div', 'btns');
+      r4.appendChild(twoTap('Disconnect this phone', 'Tap again to disconnect', 'danger', function () {
+        lsDel('cfg'); lsDel('key'); lsDel('role'); lsDel('pending'); lsDel('seen');
+        location.href = baseUrl();
+      }));
+      r4.appendChild(btn('Close', '', closeSheet));
+      sh.appendChild(r4);
+    });
+  }
+
+  /* ---------- events ---------- */
+  var bound = false;
+  function bindUi() {
+    if (bound) { return; } bound = true;
+    $('list').onclick = function (e) {
+      var t = e.target;
+      while (t && t !== this) {
+        if (t.getAttribute && t.getAttribute('data-t')) { toggle(t.getAttribute('data-t')); return; }
+        if (t.getAttribute && t.getAttribute('data-e')) { openEdit(t.getAttribute('data-e')); return; }
+        if (t.getAttribute && t.getAttribute('data-d')) { var s = t.getAttribute('data-d'); openDone[s] = !openDone[s]; render(); return; }
+        t = t.parentNode;
+      }
+    };
+    $('filters').onclick = function (e) {
+      var t = e.target; while (t && t !== this && !(t.getAttribute && t.getAttribute('data-f'))) { t = t.parentNode; }
+      if (!t || t === this) { return; }
+      filter = t.getAttribute('data-f'); lsSet('filter', filter);
+      if (filter !== 'all') { sec = filter; lsSet('sec', sec); }
+      render();
+    };
+    $('pick').onclick = function (e) {
+      var t = e.target; while (t && t !== this && !(t.getAttribute && t.getAttribute('data-s'))) { t = t.parentNode; }
+      if (!t || t === this) { return; }
+      sec = t.getAttribute('data-s'); lsSet('sec', sec); renderPick();
+    };
+    $('addBtn').onclick = addItem;
+    $('addInput').onkeydown = function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); addItem(); } };
+    $('micBtn').onclick = function () {
+      $('addInput').focus();
+      toast('Tap the microphone on the keyboard, speak, then tap Add.');
+    };
+    $('waBtn').onclick = sendWhatsApp;
+    $('gearBtn').onclick = openSettings;
+    $('homeHintX').onclick = function () { lsSet('hintHidden', true); show('homeHint', false); };
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') { lsSet('seen', Date.now()); }
+      else { seenAtOpen = lsGet('seen') || 0; }
+    });
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

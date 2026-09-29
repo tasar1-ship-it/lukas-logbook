@@ -1,0 +1,12 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "logbook": {
+      "$family": {
+        ".read": "auth != null && $family.length >= 20",
+        ".write": "auth != null && $family.length >= 20"
+      }
+    }
+  }
+}
