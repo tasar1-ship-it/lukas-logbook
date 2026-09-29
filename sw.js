@@ -1,5 +1,5 @@
 // Logbook service worker. Bump VERSION on every deploy that changes a cached file.
-var VERSION = 'logbook-v1';
+var VERSION = 'logbook-v3';
 var SHELL = [
   './',
   'index.html',
